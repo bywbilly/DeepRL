@@ -65,6 +65,40 @@ def dqn_pixel_atari(name):
     config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
     run_steps(DQNAgent(config))
 
+def half_dqn_pixel_atari(name):
+    config = Config()
+    config.half = True
+    config.history_length = 4
+    config.task_fn = lambda: PixelAtari(name, frame_skip=4, history_length=config.history_length,
+                                        log_dir=get_default_log_dir(dqn_pixel_atari.__name__))
+    config.eval_env = PixelAtari(name, frame_skip=4, history_length=config.history_length,
+                                 episode_life=False)
+
+    config.optimizer_fn = lambda params: torch.optim.RMSprop(
+        params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
+    config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
+    # config.network_fn = lambda: DuelingNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
+    config.random_action_prob = LinearSchedule(1.0, 0.01, 1e6)
+
+    # config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=32)
+    config.replay_fn = lambda: AsyncReplay(memory_size=int(1e6), batch_size=32)
+
+    config.batch_size = 32
+    config.state_normalizer = ImageNormalizer()
+    config.reward_normalizer = SignNormalizer()
+    config.discount = 0.99
+    config.target_network_update_freq = 10000
+    config.exploration_steps = 50000
+    config.sgd_update_frequency = 4
+    config.gradient_clip = 5
+    # config.double_q = True
+    config.double_q = False
+    config.max_steps = int(2e7)
+    config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
+    run_steps(DQNAgent(config))
+
+
+
 def dqn_ram_atari(name):
     config = Config()
     config.task_fn = lambda: RamAtari(name, no_op=30, frame_skip=4,
@@ -542,7 +576,7 @@ if __name__ == '__main__':
     mkdir('dataset')
     mkdir('log')
     set_one_thread()
-    select_device(-1)
+    select_device(0)
     # select_device(0)
 
     # dqn_cart_pole()
@@ -557,7 +591,7 @@ if __name__ == '__main__':
     # ddpg_low_dim_state()
 
     game = 'Breakout'
-    # dqn_pixel_atari(game)
+    dqn_pixel_atari(game)
     # quantile_regression_dqn_pixel_atari(game)
     # categorical_dqn_pixel_atari(game)
     # a2c_pixel_atari(game)

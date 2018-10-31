@@ -46,6 +46,8 @@ class DQNAgent(BaseAgent):
         self.actor = DQNActor(config)
 
         self.network = config.network_fn()
+        if config.half:
+            self.network.half()
         self.network.share_memory()
         self.target_network = config.network_fn()
         self.target_network.load_state_dict(self.network.state_dict())
