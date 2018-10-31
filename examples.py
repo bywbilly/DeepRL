@@ -576,7 +576,7 @@ if __name__ == '__main__':
     mkdir('dataset')
     mkdir('log')
     set_one_thread()
-    select_device(0)
+    select_device(1)
     # select_device(0)
 
     # dqn_cart_pole()

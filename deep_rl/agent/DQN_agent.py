@@ -50,9 +50,11 @@ class DQNAgent(BaseAgent):
         self.actor = DQNActor(config)
         self.network = config.network_fn()
         if config.half:
-            self.network.half()
+            self.network = self.network.half()
         self.network.share_memory()
         self.target_network = config.network_fn()
+        if config.half:
+            self.target_network = self.target_network.half()
         self.target_network.load_state_dict(self.network.state_dict())
         self.optimizer = config.optimizer_fn(self.network.parameters())
 
@@ -71,7 +73,7 @@ class DQNAgent(BaseAgent):
     def eval_step(self, state):
         self.config.state_normalizer.set_read_only()
         state = self.config.state_normalizer(np.stack([state]))
-        q = self.network(state)
+        q = self.network(state, half=self.config.half)
         action = np.argmax(to_np(q).flatten())
         self.config.state_normalizer.unset_read_only()
         return action
@@ -95,18 +97,21 @@ class DQNAgent(BaseAgent):
             states, actions, rewards, next_states, terminals = experiences
             states = self.config.state_normalizer(states)
             next_states = self.config.state_normalizer(next_states)
-            q_next = self.target_network(next_states).detach()
+            q_next = self.target_network(next_states, half=self.config.half).detach()
             if self.config.double_q:
-                best_actions = torch.argmax(self.network(next_states), dim=-1)
+                best_actions = torch.argmax(self.network(next_states, half=self.config.half), dim=-1)
                 q_next = q_next[self.batch_indices, best_actions]
             else:
                 q_next = q_next.max(1)[0]
             terminals = tensor(terminals)
             rewards = tensor(rewards)
+            if self.config.half:
+                terminals = terminals.half()
+                rewards = rewards.half()
             q_next = self.config.discount * q_next * (1 - terminals)
             q_next.add_(rewards)
             actions = tensor(actions).long()
-            q = self.network(states)
+            q = self.network(states, half=self.config.half)
             q = q[self.batch_indices, actions]
             loss = (q_next - q).pow(2).mul(0.5).mean()
             self.optimizer.zero_grad()
