@@ -18,8 +18,9 @@ class Plotter:
         pass
 
     def _rolling_window(self, a, window):
-        shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
+        shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)  
         strides = a.strides + (a.strides[-1],)
+        print (shape, strides)
         return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
     def _window_func(self, x, y, window, func):

@@ -21,7 +21,11 @@ class DQNActor(BaseActor):
             self._state = self._task.reset()
         config = self.config
         with config.lock:
-            q_values = self._network(config.state_normalizer(np.stack([self._state])))
+            #tmp_state = config.state_normalizer(np.stack([self._state])) 
+            #if config.half:
+            #    tmp_state.astype(np.float16)
+            #q_values = self._network(tmp_state)
+            q_values = self._network(config.state_normalizer(np.stack([self._state])), half=config.half)
         q_values = to_np(q_values).flatten()
         if self._total_steps < config.exploration_steps \
                 or np.random.rand() < config.random_action_prob():
@@ -44,7 +48,6 @@ class DQNAgent(BaseAgent):
 
         self.replay = config.replay_fn()
         self.actor = DQNActor(config)
-
         self.network = config.network_fn()
         if config.half:
             self.network.half()

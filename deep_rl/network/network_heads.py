@@ -14,8 +14,11 @@ class VanillaNet(nn.Module, BaseNet):
         self.body = body
         self.to(Config.DEVICE)
 
-    def forward(self, x):
-        phi = self.body(tensor(x))
+    def forward(self, x, half=False):
+        if half:
+            phi = self.body(tensor(x).half())
+        else:
+            phi = self.body(tensor(x))
         y = self.fc_head(phi)
         return y
 

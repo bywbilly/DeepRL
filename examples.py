@@ -591,7 +591,8 @@ if __name__ == '__main__':
     # ddpg_low_dim_state()
 
     game = 'Breakout'
-    dqn_pixel_atari(game)
+    #dqn_pixel_atari(game)
+    half_dqn_pixel_atari(game)
     # quantile_regression_dqn_pixel_atari(game)
     # categorical_dqn_pixel_atari(game)
     # a2c_pixel_atari(game)
