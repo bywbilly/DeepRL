@@ -21,6 +21,7 @@ except:
 def run_steps(agent):
     random_seed()
     config = agent.config
+    writer = agent.writer
     agent_name = agent.__class__.__name__
     t0 = time.time()
     while True:
@@ -32,6 +33,10 @@ def run_steps(agent):
             config.logger.info('total steps %d, returns %.2f/%.2f/%.2f/%.2f (mean/median/min/max), %.2f steps/s' % (
                 agent.total_steps, np.mean(rewards), np.median(rewards), np.min(rewards), np.max(rewards),
                 config.log_interval / (time.time() - t0)))
+            writer.add_scalar("Train_mean_reward", np.mean(rewards), agent.total_steps)
+            writer.add_scalar("Train_median_reward", np.median(rewards), agent.total_steps)
+            writer.add_scalar("Train_min_reward", np.min(rewards), agent.total_steps)
+            writer.add_scalar("Train_max_reward", np.max(rewards), agent.total_steps)
             t0 = time.time()
         if config.eval_interval and not agent.total_steps % config.eval_interval:
             agent.eval_episodes()

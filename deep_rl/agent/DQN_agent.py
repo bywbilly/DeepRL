@@ -114,9 +114,17 @@ class DQNAgent(BaseAgent):
             q = self.network(states, half=self.config.half)
             q = q[self.batch_indices, actions]
             loss = (q_next - q).pow(2).mul(0.5).mean()
+            self.writer.add_scalar("Train_mean_loss", loss, self.total_steps)
             self.optimizer.zero_grad()
             loss.backward()
+            if self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0):
+                for name, para in self.network.named_parameters():
+                    self.writer.add_histogram(name + "before_clip", para.grad.clone().cpu().data.numpy(), self.total_steps)
             nn.utils.clip_grad_norm_(self.network.parameters(), self.config.gradient_clip)
+            #tmp_grads = []
+            if self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0):
+                for name, para in self.network.named_parameters():
+                    self.writer.add_histogram(name + "after_clip", para.grad.clone().cpu().data.numpy(), self.total_steps)
             with config.lock:
                 self.optimizer.step()
 

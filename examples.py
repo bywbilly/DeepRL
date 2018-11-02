@@ -7,7 +7,7 @@
 from deep_rl import *
 
 # DQN
-def dqn_cart_pole():
+def dqn_cart_pole(): 
     game = 'CartPole-v0'
     config = Config()
     config.task_fn = lambda: ClassicalControl(game, max_steps=200)
@@ -51,6 +51,8 @@ def dqn_pixel_atari(name):
     # config.replay_fn = lambda: Replay(memory_size=int(1e6), batch_size=32)
     config.replay_fn = lambda: AsyncReplay(memory_size=int(1e6), batch_size=32)
 
+    #config.eval_interval = int(5e3)
+
     config.batch_size = 32
     config.state_normalizer = ImageNormalizer()
     config.reward_normalizer = SignNormalizer()
@@ -73,6 +75,7 @@ def half_dqn_pixel_atari(name):
                                         log_dir=get_default_log_dir(dqn_pixel_atari.__name__))
     config.eval_env = PixelAtari(name, frame_skip=4, history_length=config.history_length,
                                  episode_life=False)
+    #config.eval_interval = int(5e3)
 
     config.optimizer_fn = lambda params: torch.optim.RMSprop(
         params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
@@ -576,7 +579,7 @@ if __name__ == '__main__':
     mkdir('dataset')
     mkdir('log')
     set_one_thread()
-    select_device(1)
+    select_device(0)
     # select_device(0)
 
     # dqn_cart_pole()

@@ -11,9 +11,17 @@ import torch.multiprocessing as mp
 from collections import deque
 import sys
 
+from tensorboardX import SummaryWriter
+
 class BaseAgent:
     def __init__(self, config):
         self.config = config
+        self.eval_steps = 0
+        self.eval_log = []
+        self.win_mean_reward = "Eval_episode_mean_reward"
+        # For visulazation
+        self.writer = SummaryWriter("/home/fs01/yb263/tflog_half")
+        #assert (self.viz.check_connection(timeout_seconds=3), 'No Connection could be formed quickly')
 
     def close(self):
         close_obj(self.task)
@@ -42,8 +50,12 @@ class BaseAgent:
 
     def eval_episodes(self):
         rewards = []
+        self.eval_steps += 1
         for ep in range(self.config.eval_episodes):
             rewards.append(self.eval_episode())
+        self.eval_log.append([self.eval_steps, np.mean(np.asarray(rewards))])
+        #self.win_mean_reward = self.vis.scatter(X=np.array(self.eval_log), win=self.win_mean_reward, opts=dict(title="Eval_episode_reward_mean"))
+        self.writer.add_scalar("Eval_episode_reward_mean", np.mean(rewards), self.eval_steps)
         self.config.logger.info('evaluation episode return: %f(%f)' % (
             np.mean(rewards), np.std(rewards) / np.sqrt(len(rewards))))
 

@@ -57,6 +57,7 @@ class Config:
         self.async_actor = True
         # For low precision training
         self.half = False
+        self.gradient_step = 5000
 
     @property
     def eval_env(self):
