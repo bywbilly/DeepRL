@@ -5,22 +5,42 @@
 #######################################################################
 
 from .network_utils import *
+import numpy as np
+
+def save_grad(summary_writer):
+    def hook(grad):
+        for item in grad.cpu().data.numpy().flatten(-1):
+            if item == 0:
+                summary_writer.append(0)
+            else:
+                summary_writer.append(int(np.log(abs(item))))
+    return hook
 
 class NatureConvBody(nn.Module):
-    def __init__(self, in_channels=4):
+    def __init__(self, in_channels=4, activation_gradient_summary=None):
         super(NatureConvBody, self).__init__()
+        self.activation_gradient_summary = activation_gradient_summary
         self.feature_dim = 512
         self.conv1 = layer_init(nn.Conv2d(in_channels, 32, kernel_size=8, stride=4))
         self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
         self.conv3 = layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1))
         self.fc4 = layer_init(nn.Linear(7 * 7 * 64, self.feature_dim))
 
-    def forward(self, x):
+    def forward(self, x, save_gradient=False):
+        # Register hook function to store the value of the intermediate gradient
         y = F.relu(self.conv1(x))
+        if save_gradient:
+            y.register_hook(save_grad(self.activation_gradient_summary))
         y = F.relu(self.conv2(y))
+        if save_gradient:
+            y.register_hook(save_grad(self.activation_gradient_summary))
         y = F.relu(self.conv3(y))
+        if save_gradient:
+            y.register_hook(save_grad(self.activation_gradient_summary))
         y = y.view(y.size(0), -1)
         y = F.relu(self.fc4(y))
+        if save_gradient:
+            y.register_hook(save_grad(self.activation_gradient_summary))
         return y
 
 class DDPGConvBody(nn.Module):

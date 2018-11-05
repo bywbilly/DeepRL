@@ -16,11 +16,15 @@ from tensorboardX import SummaryWriter
 class BaseAgent:
     def __init__(self, config):
         self.config = config
+        #self.gradient_summary = [0 for _ in range
         self.eval_steps = 0
         self.eval_log = []
         self.win_mean_reward = "Eval_episode_mean_reward"
         # For visulazation
-        self.writer = SummaryWriter("/home/fs01/yb263/tflog_half")
+        if config.tensorboard is None:
+            self.writer = SummaryWriter("/home/fs01/yb263/tflog")
+        else:
+            self.writer = SummaryWriter(config.tensorboard)
         #assert (self.viz.check_connection(timeout_seconds=3), 'No Connection could be formed quickly')
 
     def close(self):

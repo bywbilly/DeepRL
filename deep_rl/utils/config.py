@@ -58,6 +58,10 @@ class Config:
         # For low precision training
         self.half = False
         self.gradient_step = 5000
+        self.activation_gradient_summary = None
+        self.gradient_summary = None
+        # For vis
+        self.tensorbard = None
 
     @property
     def eval_env(self):

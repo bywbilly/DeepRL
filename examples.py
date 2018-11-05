@@ -5,6 +5,7 @@
 #######################################################################
 
 from deep_rl import *
+import pickle
 
 # DQN
 def dqn_cart_pole(): 
@@ -36,6 +37,8 @@ def dqn_cart_pole():
 
 def dqn_pixel_atari(name):
     config = Config()
+    config.tensorboard = "/home/fs01/yb263/dqn_atari_tfboard_test"
+    mkdir(config.tensorboard)
     config.history_length = 4
     config.task_fn = lambda: PixelAtari(name, frame_skip=4, history_length=config.history_length,
                                         log_dir=get_default_log_dir(dqn_pixel_atari.__name__))
@@ -44,7 +47,9 @@ def dqn_pixel_atari(name):
 
     config.optimizer_fn = lambda params: torch.optim.RMSprop(
         params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
-    config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
+    gradient_summary = []
+    activation_gradient_summary = []
+    config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length, activation_gradient_summary=activation_gradient_summary))
     # config.network_fn = lambda: DuelingNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
     config.random_action_prob = LinearSchedule(1.0, 0.01, 1e6)
 
@@ -61,14 +66,25 @@ def dqn_pixel_atari(name):
     config.exploration_steps = 50000
     config.sgd_update_frequency = 4
     config.gradient_clip = 5
+    # For storing activation gradient summary
+    config.gradient_summary = gradient_summary
+    config.activation_gradient_summary = activation_gradient_summary
     # config.double_q = True
     config.double_q = False
     config.max_steps = int(2e7)
+    #config.max_steps = 2
     config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
     run_steps(DQNAgent(config))
 
+    with open("./pickle_results/dqn_atari_activation.pickle", "wb") as f:
+        pickle.dump(activation_gradient_summary, f)
+    with open("./pickle_results/dqn_atari.pickle", "wb") as f:
+        pickle.dump(gradient_summary, f)
+
 def half_dqn_pixel_atari(name):
     config = Config()
+    config.tensorboard = "/home/fs01/yb263/dqn_half_atari_tfboard_test"
+    mkdir(config.tensorboard)
     config.half = True
     config.history_length = 4
     config.task_fn = lambda: PixelAtari(name, frame_skip=4, history_length=config.history_length,
@@ -79,7 +95,9 @@ def half_dqn_pixel_atari(name):
 
     config.optimizer_fn = lambda params: torch.optim.RMSprop(
         params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
-    config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
+    gradient_summary = []
+    activation_gradient_summary = []
+    config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length, activation_gradient_summary=activation_gradient_summary))
     # config.network_fn = lambda: DuelingNet(config.action_dim, NatureConvBody(in_channels=config.history_length))
     config.random_action_prob = LinearSchedule(1.0, 0.01, 1e6)
 
@@ -94,13 +112,20 @@ def half_dqn_pixel_atari(name):
     config.exploration_steps = 50000
     config.sgd_update_frequency = 4
     config.gradient_clip = 5
+    # For storing activation gradient summary
+    config.activation_gradient_summary = activation_gradient_summary
+    config.gradient_summary = gradient_summary
     # config.double_q = True
     config.double_q = False
     config.max_steps = int(2e7)
+    #config.max_steps = 2
     config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
     run_steps(DQNAgent(config))
-
-
+    
+    with open("./pickle_results/half_dqn_atari_activation.pickle", "wb") as f:
+        pickle.dump(activation_gradient_summary, f)
+    with open("./pickle_results/half_dqn_atari.pickle", "wb") as f:
+        pickle.dump(gradient_summary, f)
 
 def dqn_ram_atari(name):
     config = Config()

@@ -92,7 +92,7 @@ class DQNAgent(BaseAgent):
             experiences.append([state, action, reward, next_state, done])
         self.replay.feed_batch(experiences)
 
-        if self.total_steps > self.config.exploration_steps:
+        if (self.total_steps > self.config.exploration_steps):
             experiences = self.replay.sample()
             states, actions, rewards, next_states, terminals = experiences
             states = self.config.state_normalizer(states)
@@ -111,20 +111,46 @@ class DQNAgent(BaseAgent):
             q_next = self.config.discount * q_next * (1 - terminals)
             q_next.add_(rewards)
             actions = tensor(actions).long()
-            q = self.network(states, half=self.config.half)
+            save_gradient = False
+            if (self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0)):
+                save_gradient = True
+            q = self.network(states, half=self.config.half, save_gradient=save_gradient)
             q = q[self.batch_indices, actions]
             loss = (q_next - q).pow(2).mul(0.5).mean()
             self.writer.add_scalar("Train_mean_loss", loss, self.total_steps)
             self.optimizer.zero_grad()
             loss.backward()
-            if self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0):
+            if (self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0)):
                 for name, para in self.network.named_parameters():
-                    self.writer.add_histogram(name + "before_clip", para.grad.clone().cpu().data.numpy(), self.total_steps)
+                    log2_grad = []
+                    for item in para.grad.clone().cpu().data.numpy().flatten(-1):
+                        if item == 0:
+                            log2_grad.append(0)
+                        else:
+                            log2_grad.append(int(np.log(abs(item))))
+                    self.writer.add_histogram(name + "before_clip", np.array(log2_grad), self.total_steps)
             nn.utils.clip_grad_norm_(self.network.parameters(), self.config.gradient_clip)
             #tmp_grads = []
-            if self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0):
+            if (self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0)):
                 for name, para in self.network.named_parameters():
-                    self.writer.add_histogram(name + "after_clip", para.grad.clone().cpu().data.numpy(), self.total_steps)
+                    log2_grad = []
+                    for item in para.grad.clone().cpu().data.numpy().flatten(-1):
+                        if item == 0:
+                            log2_grad.append(0)
+                            self.config.gradient_summary.append(0)
+                        else:
+                            log2_grad.append(int(np.log(abs(item))))
+                            self.config.gradient_summary.append(int(np.log(abs(item))))
+                    self.writer.add_histogram(name + "after_clip", np.array(log2_grad), self.total_steps)
+            if self.total_steps == 1:
+                self.writer.add_histogram("normal gradient 1", self.config.gradient_summary, self.total_steps)
+                self.writer.add_histogram("activation gradient 1", self.config.activation_gradient_summary, self.total_steps)
+            if self.total_steps == int(1e7):
+                self.writer.add_histogram("normal gradient 1e7", self.config.gradient_summary, self.total_steps)
+                self.writer.add_histogram("activation gradient 1e7", self.config.activation_gradient_summary, self.total_steps)
+            if self.total_steps == int(1e7 + 5e6):
+                self.writer.add_histogram("normal gradient 1.5e7", self.config.gradient_summary, self.total_steps)
+                self.writer.add_histogram("activation gradient 1.5e7", self.config.activation_gradient_summary, self.total_steps)
             with config.lock:
                 self.optimizer.step()
 

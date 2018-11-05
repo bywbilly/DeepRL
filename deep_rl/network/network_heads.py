@@ -8,17 +8,18 @@ from .network_utils import *
 from .network_bodies import *
 
 class VanillaNet(nn.Module, BaseNet):
-    def __init__(self, output_dim, body):
+    # Activation gradient summary is used to store the intermediate gradient 
+    def __init__(self, output_dim, body, activation_gradient_summary=None):
         super(VanillaNet, self).__init__()
         self.fc_head = layer_init(nn.Linear(body.feature_dim, output_dim))
         self.body = body
         self.to(Config.DEVICE)
 
-    def forward(self, x, half=False):
+    def forward(self, x, half=False, save_gradient=False):
         if half:
-            phi = self.body(tensor(x).half())
+            phi = self.body(tensor(x).half(), save_gradient)
         else:
-            phi = self.body(tensor(x))
+            phi = self.body(tensor(x), save_gradient)
         y = self.fc_head(phi)
         return y
 
