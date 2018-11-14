@@ -37,7 +37,7 @@ def dqn_cart_pole():
 
 def dqn_pixel_atari(name):
     config = Config()
-    config.tensorboard = "/home/fs01/yb263/dqn_atari_tfboard_test"
+    config.tensorboard = "/home/fs01/yb263/dqn_pong_tfboard"
     mkdir(config.tensorboard)
     config.history_length = 4
     config.task_fn = lambda: PixelAtari(name, frame_skip=4, history_length=config.history_length,
@@ -73,17 +73,18 @@ def dqn_pixel_atari(name):
     config.double_q = False
     config.max_steps = int(2e7)
     #config.max_steps = 2
-    config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
+    #config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
+    config.logger = get_logger(file_name="dqn_pixel_Qbert")
     run_steps(DQNAgent(config))
 
-    with open("./pickle_results/dqn_atari_activation.pickle", "wb") as f:
+    with open("./pickle_results/dqn_pong_tactivation.pickle", "wb") as f:
         pickle.dump(activation_gradient_summary, f)
-    with open("./pickle_results/dqn_atari.pickle", "wb") as f:
+    with open("./pickle_results/dqn_pong.pickle", "wb") as f:
         pickle.dump(gradient_summary, f)
 
 def half_dqn_pixel_atari(name):
     config = Config()
-    config.tensorboard = "/home/fs01/yb263/dqn_half_atari_tfboard_test"
+    config.tensorboard = "/home/fs01/yb263/dqn_half_pong_tfboard"
     mkdir(config.tensorboard)
     config.half = True
     config.history_length = 4
@@ -93,8 +94,11 @@ def half_dqn_pixel_atari(name):
                                  episode_life=False)
     #config.eval_interval = int(5e3)
 
-    config.optimizer_fn = lambda params: torch.optim.RMSprop(
-        params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
+    #config.optimizer_fn = lambda params: torch.optim.RMSprop(
+    #    params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
+    # the suared of weight will cause zero in FP16 training, so we use Adam instead
+    config.optimizer_fn = lambda params: torch.optim.Adam(
+        params, lr=0.0005, eps=1e-04)
     gradient_summary = []
     activation_gradient_summary = []
     config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length, activation_gradient_summary=activation_gradient_summary))
@@ -119,12 +123,13 @@ def half_dqn_pixel_atari(name):
     config.double_q = False
     config.max_steps = int(2e7)
     #config.max_steps = 2
-    config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
+    #config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
+    config.logger = get_logger(file_name="half_dqn_pixel_pong")
     run_steps(DQNAgent(config))
     
-    with open("./pickle_results/half_dqn_atari_activation.pickle", "wb") as f:
+    with open("./pickle_results/half_dqn_pong_activation.pickle", "wb") as f:
         pickle.dump(activation_gradient_summary, f)
-    with open("./pickle_results/half_dqn_atari.pickle", "wb") as f:
+    with open("./pickle_results/half_dqn_pong.pickle", "wb") as f:
         pickle.dump(gradient_summary, f)
 
 def dqn_ram_atari(name):
@@ -602,10 +607,10 @@ def action_conditional_video_prediction():
 if __name__ == '__main__':
     mkdir('data/video')
     mkdir('dataset')
-    mkdir('log')
+    mkdir('newlog')
     set_one_thread()
+    #select_device(2)
     select_device(0)
-    # select_device(0)
 
     # dqn_cart_pole()
     # quantile_regression_dqn_cart_pole()
@@ -618,7 +623,7 @@ if __name__ == '__main__':
     # ppo_continuous()
     # ddpg_low_dim_state()
 
-    game = 'Breakout'
+    game = 'Pong'
     #dqn_pixel_atari(game)
     half_dqn_pixel_atari(game)
     # quantile_regression_dqn_pixel_atari(game)

@@ -16,7 +16,8 @@ def get_logger(name='MAIN', file_name=None, log_dir='./log', skip=False, level=l
     logger = logging.getLogger(name)
     logger.setLevel(level)
     if file_name is not None:
-        file_name = '%s-%s' % (file_name, get_time_str())
+        #file_name = '%s-%s' % (file_name, get_time_str())
+        file_name = file_name
         fh = logging.FileHandler('%s/%s.txt' % (log_dir, file_name))
         fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s'))
         fh.setLevel(level)

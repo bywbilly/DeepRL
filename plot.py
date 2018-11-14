@@ -5,10 +5,11 @@ if __name__ == "__main__":
 
     plotter = Plotter()
     dirs = [
-        'dqn_pixel_atari-181030-150008' 
+        #'dqn_pixel_atari-181030-150008' 
+        'dqn_pixel_atari-181031-163949'
     ]
     names = [
-        'DQN'
+        'DQN_pure_half'
     ]
 
     plt.figure()
@@ -20,7 +21,7 @@ if __name__ == "__main__":
     plt.ylabel('episode return')
     plt.legend()
 
-    plt.savefig("DQN.png")
+    plt.savefig("DQN_pure_half.png")
 
 
 

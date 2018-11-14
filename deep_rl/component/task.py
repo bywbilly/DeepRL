@@ -14,11 +14,13 @@ class BaseTask:
     def __init__(self):
         pass
 
-    def set_monitor(self, env, log_dir):
+    def set_monitor(self, env, log_dir, name=None):
         if log_dir is None:
             return env
+        if name is None:
+            name = "none"
         mkdir(log_dir)
-        return Monitor(env, '%s/%s' % (log_dir, uuid.uuid4()))
+        return Monitor(env, '%s/%s' % (log_dir, name))
 
     def reset(self):
         return self.env.reset()
@@ -52,7 +54,7 @@ class PixelAtari(BaseTask):
         if dataset:
             env = DatasetEnv(env)
             self.dataset_env = env
-        env = self.set_monitor(env, log_dir)
+        env = self.set_monitor(env, log_dir, name=name)
         env = wrap_deepmind(env, history_length=history_length, episode_life=episode_life)
         self.env = env
         self.action_dim = self.env.action_space.n

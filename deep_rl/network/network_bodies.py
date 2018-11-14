@@ -10,6 +10,8 @@ import numpy as np
 def save_grad(summary_writer):
     def hook(grad):
         for item in grad.cpu().data.numpy().flatten(-1):
+            if np.isnan(item):
+                continue
             if item == 0:
                 summary_writer.append(0)
             else:
