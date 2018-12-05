@@ -1,8 +1,6 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
-from torch.nn.parameter import Parameter
-from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 
 class loss_scaler(object):
 
@@ -18,6 +16,7 @@ class mixed_precision_optimizer(object):
     def __init__(self, init_optimizer, scale_factor=1.0):
         
         self.optimizer = init_optimizer
+        self.scale_factor=scale_factor
         self.fp16 = []
         self.fp32fromfp16 = []
         self.fp32fromfp32 = []
@@ -66,11 +65,11 @@ class mixed_precision_optimizer(object):
 
     def _zero_grad(self, param):
         param.grad.detach_()
-        param.zero_()
+        param.grad.zero_()
 
     def zero_grad(self):
         for g in self.optimizer.param_groups:
-            for p in group['params']:
+            for p in g['params']:
                 if p.grad is not None:
                     self._zero_grad(p)
         for g in self.fp16:
@@ -79,7 +78,7 @@ class mixed_precision_optimizer(object):
                     self._zero_grad(p)
 
     def model_grads2master_grads(self, model_p, master_p):
-        for model, master in zip(model_params, master_params):
+        for model, master in zip(model_p, master_p):
             if model.grad is not None:
                 if master.grad is None:
                     master.grad = Variable(master.data.new(*master.data.size()))
@@ -88,7 +87,6 @@ class mixed_precision_optimizer(object):
                 master.gard = None
 
     def step(self):
-        self._update_scale()
         ret = self.optimizer.step()               
         for fp16_g, fp32fromfp16_g in zip(self.fp16, self.fp32fromfp16):
             self.model_grads2master_grads(fp16_g, fp32fromfp16_g)
