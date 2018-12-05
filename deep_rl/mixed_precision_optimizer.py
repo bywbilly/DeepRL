@@ -4,6 +4,15 @@ from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 
+class loss_scaler(object):
+
+    def __init__(self, scale_factor=1.0):
+        self.scale_factor = scale_factor
+
+    def backward(self, loss):
+        scaled_loss = loss * self.scale_factor
+        scaled_loss.backward()
+
 class mixed_precision_optimizer(object):
 
     def __init__(self, init_optimizer, scale_factor=1.0):
@@ -40,21 +49,49 @@ class mixed_precision_optimizer(object):
 
         self.ls = loss_scaler(scale_factor)
 
+    def state_dict(self):
+        ret = {}
+        ret['loss_scaler'] = self.ls
+        ret['optimizer_state_dict'] = self.optimizer.state_dict()
+        ret['fp32fromfp16'] = self.fp32fromfp16
+        return ret
+
     def load_state_dict(self, state_dict):
 
-    self.ls = state_dict['loss_scaler']
-    self.optimizer.load_state_dict(state_dict['optimizer_state_dict']
+        self.ls = state_dict['loss_scaler']
+        self.optimizer.load_state_dict(state_dict['optimizer_state_dict'])
+        for cur_g, saved_g in zip(self.fp32fromfp16, state_dict['fp32fromfp16']):
+            for cur, saved in zip(cur_g, saved_g):
+                cur.data.copy_(saved.data)
 
-    for cur_g, saved_g in zip(self.fp32fromfp16, state_dict['fp32fromfp16']):
-        for cur, saved in zip(cur_g, saved_g):
-            cur.data.copy_(saved.data)
+    def model_grads2master_grads(self, model_p, master_p):
+        for model, master in zip(model_params, master_params):
+            if model.grad is not None:
+                if master.grad is None:
+                    master.grad = Variable(master.data.new(*master.data.size()))
+                master.grad.data.copy_(model.grad.data)
+            else:
+                master.gard = None
 
     def step(self):
         self._update_scale()
         ret = self.optimizer.step()               
-        self._master_params_to_model_params()
-
+        for fp16_g, fp32fromfp16_g in zip(self.fp16, self.fp32fromfp16):
+            self.model_grads2master_grads(fp16_g, fp32fromfp16_g)
         return ret
+
+    def backward(self, loss):
+        self.ls.backward(loss.float())
+        # update master grads
+        for fp16_g, fp32fromfp16_g in zip(self.fp16, self.fp32fromfp16):
+            self.model_grads2master_grads(fp16_g, fp32fromfp16_g)
+        # Downscale
+        if self.scale_factor != 1.0:
+            for g in self.optimizer.param_groups:
+                for param in g['params']:
+                    if param.grad is not None:
+                        param.grad.data.mul_(1. / self.scale_factor)
+        
 
 
 
