@@ -64,6 +64,20 @@ class mixed_precision_optimizer(object):
             for cur, saved in zip(cur_g, saved_g):
                 cur.data.copy_(saved.data)
 
+    def _zero_grad(self, param):
+        param.grad.detach_()
+        param.zero_()
+
+    def zero_grad(self):
+        for g in self.optimizer.param_groups:
+            for p in group['params']:
+                if p.grad is not None:
+                    self._zero_grad(p)
+        for g in self.fp16:
+            for p in g:
+                if p.grad is not None:
+                    self._zero_grad(p)
+
     def model_grads2master_grads(self, model_p, master_p):
         for model, master in zip(model_params, master_params):
             if model.grad is not None:
