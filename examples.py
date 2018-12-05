@@ -37,16 +37,18 @@ def dqn_cart_pole():
 
 def dqn_pixel_atari(name):
     config = Config()
-    config.tensorboard = "/home/fs01/yb263/dqn_pong_tfboard"
+    config.tensorboard = "/home/fs01/yb263/dqn_%s_tfboard_scale" % (name)
     mkdir(config.tensorboard)
     config.history_length = 4
     config.task_fn = lambda: PixelAtari(name, frame_skip=4, history_length=config.history_length,
-                                        log_dir=get_default_log_dir(dqn_pixel_atari.__name__))
+                                        log_dir=get_default_log_dir("%s_scale" % (name)))
     config.eval_env = PixelAtari(name, frame_skip=4, history_length=config.history_length,
                                  episode_life=False)
 
-    config.optimizer_fn = lambda params: torch.optim.RMSprop(
-        params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
+    #config.optimizer_fn = lambda params: torch.optim.RMSprop(
+    #    params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
+    config.optimizer_fn = lambda params: torch.optim.Adam(
+        params, lr=0.0001, eps=1e-08)
     gradient_summary = []
     activation_gradient_summary = []
     config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length, activation_gradient_summary=activation_gradient_summary))
@@ -74,22 +76,22 @@ def dqn_pixel_atari(name):
     config.max_steps = int(2e7)
     #config.max_steps = 2
     #config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
-    config.logger = get_logger(file_name="dqn_pixel_Qbert")
+    config.logger = get_logger(file_name="dqn_pixel_%s_scale" % (name))
     run_steps(DQNAgent(config))
 
-    with open("./pickle_results/dqn_pong_tactivation.pickle", "wb") as f:
+    with open("./pickle_results/dqn_%s_tactivation_scale.pickle" % (name), "wb") as f:
         pickle.dump(activation_gradient_summary, f)
-    with open("./pickle_results/dqn_pong.pickle", "wb") as f:
+    with open("./pickle_results/dqn_%s_scale.pickle" % (name), "wb") as f:
         pickle.dump(gradient_summary, f)
 
 def half_dqn_pixel_atari(name):
     config = Config()
-    config.tensorboard = "/home/fs01/yb263/dqn_half_pong_tfboard"
+    config.tensorboard = "/home/fs01/yb263/noscale_dqn_half_%s_tfboard" % (name)
     mkdir(config.tensorboard)
     config.half = True
     config.history_length = 4
     config.task_fn = lambda: PixelAtari(name, frame_skip=4, history_length=config.history_length,
-                                        log_dir=get_default_log_dir(dqn_pixel_atari.__name__))
+                                        log_dir=get_default_log_dir("noscale_half_dqn_%s" % (name)))
     config.eval_env = PixelAtari(name, frame_skip=4, history_length=config.history_length,
                                  episode_life=False)
     #config.eval_interval = int(5e3)
@@ -98,7 +100,7 @@ def half_dqn_pixel_atari(name):
     #    params, lr=0.00025, alpha=0.95, eps=0.01, centered=True)
     # the suared of weight will cause zero in FP16 training, so we use Adam instead
     config.optimizer_fn = lambda params: torch.optim.Adam(
-        params, lr=0.0005, eps=1e-04)
+        params, lr=0.0001, eps=1e-08)
     gradient_summary = []
     activation_gradient_summary = []
     config.network_fn = lambda: VanillaNet(config.action_dim, NatureConvBody(in_channels=config.history_length, activation_gradient_summary=activation_gradient_summary))
@@ -124,12 +126,12 @@ def half_dqn_pixel_atari(name):
     config.max_steps = int(2e7)
     #config.max_steps = 2
     #config.logger = get_logger(file_name=dqn_pixel_atari.__name__)
-    config.logger = get_logger(file_name="half_dqn_pixel_pong")
+    config.logger = get_logger(file_name="noscale_half_dqn_pixel_%s" % (name))
     run_steps(DQNAgent(config))
     
-    with open("./pickle_results/half_dqn_pong_activation.pickle", "wb") as f:
+    with open("./pickle_results/noscale_half_dqn_%s_activation.pickle" % (name), "wb") as f:
         pickle.dump(activation_gradient_summary, f)
-    with open("./pickle_results/half_dqn_pong.pickle", "wb") as f:
+    with open("./pickle_results/noscale_half_dqn_%s.pickle" % (name), "wb") as f:
         pickle.dump(gradient_summary, f)
 
 def dqn_ram_atari(name):
@@ -623,9 +625,12 @@ if __name__ == '__main__':
     # ppo_continuous()
     # ddpg_low_dim_state()
 
-    game = 'Pong'
-    #dqn_pixel_atari(game)
-    half_dqn_pixel_atari(game)
+    #game = 'Breakout'
+    #game = 'Pong'
+    game = 'Qbert'
+    #game = 'SpaceInvaders'
+    dqn_pixel_atari(game)
+    #half_dqn_pixel_atari(game)
     # quantile_regression_dqn_pixel_atari(game)
     # categorical_dqn_pixel_atari(game)
     # a2c_pixel_atari(game)

@@ -60,7 +60,7 @@ class DQNAgent(BaseAgent):
         self.target_network.load_state_dict(self.network.state_dict())
         self.optimizer = config.optimizer_fn(self.network.parameters())
         if config.half:
-            self.optimizer = apex.fp16_utils.FP16_Optimizer(self.optimizer, static_loss_scale=64.0)
+            self.optimizer = apex.fp16_utils.FP16_Optimizer(self.optimizer, static_loss_scale=1.0)
 
         self.actor.set_network(self.network)
 
@@ -121,6 +121,7 @@ class DQNAgent(BaseAgent):
             q = self.network(states, half=self.config.half, save_gradient=save_gradient)
             q = q[self.batch_indices, actions]
             loss = (q_next - q).pow(2).mul(0.5).mean()
+            loss *= 64.0
             self.writer.add_scalar("Train_mean_loss", loss, self.total_steps)
 
             #config.logger.info("Training mean loss: %d" % (loss.clone().cpu().data)) 
@@ -129,6 +130,7 @@ class DQNAgent(BaseAgent):
             self.optimizer.zero_grad()
             if config.half:
                 self.optimizer.backward(loss)
+                self.optimizer.clip_master_grads(self.config.gradient_clip)
             else:
                 loss.backward()
             if (self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0)):
@@ -142,7 +144,8 @@ class DQNAgent(BaseAgent):
                         else:
                             log2_grad.append(int(np.log2(abs(item))))
                     self.writer.add_histogram(name + "before_clip", np.array(log2_grad), self.total_steps)
-            nn.utils.clip_grad_norm_(self.network.parameters(), self.config.gradient_clip)
+            if not config.half:
+                nn.utils.clip_grad_norm_(self.network.parameters(), self.config.gradient_clip)
             #tmp_grads = []
             if (self.config.gradient_step and (self.total_steps % self.config.gradient_step == 0)):
                 for name, para in self.network.named_parameters():
