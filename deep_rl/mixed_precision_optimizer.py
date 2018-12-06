@@ -86,10 +86,14 @@ class mixed_precision_optimizer(object):
             else:
                 master.gard = None
 
+    def master_params2model_params(self, model_p, master_p):
+        for model, master in zip(model_p, master_p):
+            model.data.copy_(master.data)
+
     def step(self):
         ret = self.optimizer.step()               
         for fp16_g, fp32fromfp16_g in zip(self.fp16, self.fp32fromfp16):
-            self.model_grads2master_grads(fp16_g, fp32fromfp16_g)
+            self.master_params2model_params(fp16_g, fp32fromfp16_g)
         return ret
 
     def backward(self, loss):

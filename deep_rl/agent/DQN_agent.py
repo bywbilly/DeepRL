@@ -60,7 +60,6 @@ class DQNAgent(BaseAgent):
         self.target_network.load_state_dict(self.network.state_dict())
         self.optimizer = config.optimizer_fn(self.network.parameters())
         if config.half:
-            #self.optimizer = apex.fp16_utils.FP16_Optimizer(self.optimizer, static_loss_scale=1.0)
             self.optimizer = mpo.mixed_precision_optimizer(self.optimizer, scale_factor=1.0)
 
         self.actor.set_network(self.network)
